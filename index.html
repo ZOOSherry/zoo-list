@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZOO 聯盟名單驗證系統</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #e9ecef; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: #333; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #28a745; font-size: 14px; font-weight: bold; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input[type="text"] { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; font-size: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        button:disabled { background-color: #ccc !important; cursor: not-allowed; }
+        .btn-check { background-color: #007bff; }
+        .btn-check:hover { background-color: #0056b3; }
+        .btn-add { background-color: #28a745; }
+        .btn-add:hover { background-color: #218838; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 4px; font-weight: bold; text-align: center; display: none; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+        .loading { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .db-count { text-align: right; font-size: 12px; color: #888; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ZOO 聯盟名單驗證系統</h2>
+    <div class="subtitle">● 雲端即時同步版</div>
+    
+    <div class="form-group">
+        <label for="inputData">請輸入驗證編號：</label>
+        <input type="text" id="inputData" placeholder="例如：123454658" autocomplete="off">
+    </div>
+    
+    <div class="btn-group">
+        <button id="btnCheck" class="btn-check" onclick="checkData()">🔍 確認是否在名單內</button>
+        <button id="btnAdd" class="btn-add" onclick="addData()">➕ 新增至名單</button>
+    </div>
+    
+    <div id="result"></div>
+    <div class="db-count" id="dbCount">正在連線雲端資料庫...</div>
+</div>
+
+<script>
+    // ⚠️【請注意】請將下方引號內的網址，替換成你在「步驟二」複製的那串 Google Apps Script 網址！
+    const GAS_URL = "這裡請換成你的GAS網址";
+
+    function setButtonsDisabled(disabled) {
+        document.getElementById('btnCheck').disabled = disabled;
+        document.getElementById('btnAdd').disabled = disabled;
+    }
+
+    function showResult(message, type) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.className = ''; 
+        resultDiv.classList.add(type);
+        resultDiv.innerText = message;
+        resultDiv.style.display = 'block';
+    }
+
+    function updateCount() {
+        fetch(`${GAS_URL}?action=count`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    document.getElementById('dbCount').innerText = `目前名單總數：${data.count} 筆`;
+                }
+            })
+            .catch(err => { document.getElementById('dbCount').innerText = `無法取得雲端筆數`; });
+    }
+
+    function checkData() {
+        const inputVal = document.getElementById('inputData').value.trim();
+        if (!inputVal) { showResult('⚠️ 請先輸入要查詢的內容！', 'info'); return; }
+        showResult('⏳ 正在查詢雲端名單...', 'loading');
+        setButtonsDisabled(true);
+
+        fetch(`${GAS_URL}?action=check&value=${encodeURIComponent(inputVal)}`)
+            .then(res => res.json())
+            .then(data => {
+                setButtonsDisabled(false);
+                if (data.exists) {
+                    showResult(`🎉【${inputVal}】確實在名單內！`, 'success');
+                } else {
+                    showResult(`❌【${inputVal}】不在名單內。`, 'danger');
+                }
+            })
+            .catch(err => { setButtonsDisabled(false); showResult('❌ 連線失敗，請檢查網路設定！', 'danger'); });
+    }
+
+    function addData() {
+        const inputVal = document.getElementById('inputData').value.trim();
+        if (!inputVal) { showResult('⚠️ 請先輸入要新增的內容！', 'info'); return; }
+        showResult('⏳ 正在寫入雲端...', 'loading');
+        setButtonsDisabled(true);
+
+        fetch(`${GAS_URL}?action=add&value=${encodeURIComponent(inputVal)}`)
+            .then(res => res.json())
+            .then(data => {
+                setButtonsDisabled(false);
+                if (data.status === "success") {
+                    showResult(`✅ 成功將【${inputVal}】新增至名單！`, 'success');
+                    updateCount();
+                } else if (data.status === "exists") {
+                    showResult(`💡【${inputVal}】已經存在，不需重複新增。`, 'info');
+                }
+            })
+            .catch(err => { setButtonsDisabled(false); showResult('❌ 連線失敗，請檢查網路設定！', 'danger'); });
+    }
+
+    if (GAS_URL !== "https://script.google.com/macros/s/AKfycbwSeSxJfA7WzrBrWZY1ad2eJ0VQsqzlzrtAPIOk9ds06Jm_V_PcmawE691ndtdGynG0ng/exec") { updateCount(); } else { document.getElementById('dbCount').innerText = "❌ 請先在程式碼中設定您的 GAS_URL"; }
+</script>
+
+</body>
+</html>
