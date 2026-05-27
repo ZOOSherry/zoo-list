@@ -39,7 +39,7 @@
    </div>
     
    <div class="btn-group">
-       <button id="btnCheck" class="btn-check" onclick="checkData()">🔍 確認是否在名單內</button>
+       <button id="btnCheck" class="btn-check" onclick="checkData()">🔍 確認是否在禁止Banned名單內</button>
        <button id="btnAdd" class="btn-add" onclick="addData()">➕ 新增至禁止名單Add Banned</button>
    </div>
     
@@ -86,9 +86,9 @@
            .then(data => {
                 setButtonsDisabled(false);
                 if (data.exists) {
-                    showResult(`🎉【${inputVal}】確實在名單內！`, 'success');
+                    showResult(`🎉【${inputVal}】Confirmed確實在名單內！`, 'success');
                 } else {
-                    showResult(`❌【${inputVal}】不在名單內。`, 'danger');
+                    showResult(`❌【${inputVal}】No不在名單內。`, 'danger');
                 }
            })
            .catch(err => { setButtonsDisabled(false); showResult('❌ 連線失敗，請檢查網路設定！', 'danger'); });
